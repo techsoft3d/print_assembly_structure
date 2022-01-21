@@ -28,7 +28,7 @@ Windows users should edit the project properties in Visual Studio and add the in
 
 If you are using `cmake`, edit `CMakeLists.txt` and add the following line to the file:
 
-```
+```cpp
 include_directories(/opt/ts3d/HOOPS_Exchange_Publish_2021_SP2_U2/include)
 ```
 
@@ -38,13 +38,13 @@ NOTE: The argument should specify the location of **your** installation of HOOPS
 
 If you are using `cmake` edit `CMakeLists.txt` and add the following line to the file:
 
-```
+```cpp
 target_link_libraries(he_basic_app -ldl)
 ```
 
 Here is a complete file that can serve as an easy starting point for your `CMakeLists.txt.`
 
-```
+```cmake
 cmake_minimum_required(VERSION 3.0.0)
 project(he_basic_app VERSION 0.1.0)
 
@@ -77,8 +77,8 @@ This all-inclusive header provides you access to the entire toolkit.
 Open _main.cpp_ in your IDE‘s editor.
 Add the following line to the top of the file at line 1.
 
-```
-##include <A3DSDKIncludes.h>
+```cpp
+#include <A3DSDKIncludes.h>
 ```
 
 After adding this line, you should be able to build and run if you‘ve specified the include path correctly in the previous section.
@@ -87,7 +87,7 @@ To properly initialize HOOPS Exchange, **one** of compilation units in your appl
 By doing adding this preprocessor definition, you are enabling the code that creates the global instance of the API itself.
 Add the following line just before you include the Exchange header.
 
-```
+```cpp
 #define INITIALIZE_A3D_API
 #include <A3DSDKIncludes.h>
 ```
@@ -109,7 +109,7 @@ The first step is to load the dynamic libraries into memory and initialize all t
 Sounds complicated, right? Luckily, this is done by simply invoking a function.
 Add the following lines of code inside of main.
 
-```
+```cpp
 A3DBool const is_loaded = A3DSDKLoadLibraryA("X:/HOOPS_Exchange_Publish_2021_SP2_U2/bin/win64_v140");
 if( !is_loaded ) {
   std::cerr << "Unable to load HOOPS Exchange." << std::endl;
@@ -123,7 +123,7 @@ Make sure the path you specify as the argument matches the specifics of your ins
 We will keep good on our promise to unload the libraries when we‘re finished.
 Easily done- just add this line before you return _0_.
 
-```
+```cpp
 A3DSDKUnloadLibrary();
 return 0;
 ```
@@ -139,13 +139,13 @@ Verify it is present.
 
 Include the license file header by adding the following line at the top of the file.
 
-```
+```cpp
 #include <hoops_license.h>
 ```
 
 Use the API to unlock HOOPS Exchange by adding the following lines of code after the library loading functionality you just added.
 
-```
+```cpp
 A3DStatus const license_status = A3DLicPutUnifiedLicense( HOOPS_LICENSE );
 if( A3D_SUCCESS != license_status ) {
   std::cerr << "Unable to license HOOPS Exchange." << std::endl;
@@ -170,7 +170,7 @@ The final step allows HOOPS Exchange to perform initialization of its internal s
 Additionally, this function checks to ensure the version numbers declared in the Exchange headers you‘ve included are a match with those baked into the dynamic library.
 Here are the lines of code to add.
 
-```
+```cpp
 A3DStatus const init_status = A3DDllInitialize( A3D_DLL_MAJORVERSION, A3D_DLL_MINORVERSION );
 if( A3D_SUCCESS != init_status ) {
   std::cerr << "Unable to initialize HOOPS Exchange." << std::endl;
@@ -194,7 +194,7 @@ It implements all this functionality internally.
 The only caveat is that the lifetime of the object you declare must match or exceed your use of any Exchange API.
 If you go this route, our entire program becomes the following.
 
-```
+```cpp
 int main(int, char**) {
   A3DSDKHOOPSExchangeLoader
   loader(L"X:/HOOPS_Exchange_Publish_2021_SP2_U2/bin/win64_v140");
@@ -231,14 +231,14 @@ Since the objective is to simply load a file and print the assembly structure, t
 Declare the options structure and initialize it using the following code.
 We‘ll describe this code in more detail later.
 
-```
+```cpp
 A3DRWParamsLoadData load_params;
 A3D_INITIALIZE_DATA( A3DRWParamsLoadData, load_params );
 ```
 
 Next, we need a variable to hold the resulting model file handle.
 
-```
+```cpp
 A3DAsmModelFile *model_file = nullptr;
 ```
 
@@ -249,7 +249,7 @@ And finally, we can call the Exchange function that loads a file.
 Please note the hard coded file path to an input file here.
 You should at least change this to your installation‘s path, but you can point it at any file you‘d like, provided the [format is supported](overview.html) by HOOPS Exchange.
 
-```
+```cpp
 auto const input_file = "X:/HOOPS_Exchange_2021_SP2_U2/samples/data/prc/__drill.prc";
 A3DStatus load_status = A3DAsmModelFileLoadFromFile( input_file, &load_params, &model_file );
 if( A3D_SUCCESS != load_status ) {
@@ -266,7 +266,7 @@ if( A3D_SUCCESS != load_status ) {
 Let‘s be good citizens and clean up after ourselves.
 Assume there is some usage of the model file, and when we‘re finished it should be cleaned up just before the program exits.
 
-```
+```cpp
 A3DAsmModelFileDelete( model_file );
 model_file = nullptr;
 return 0;
@@ -283,7 +283,7 @@ You will also learn the fundamental usage pattern for all data retrieval from Ex
 Let‘s print the model file object‘s name to `stdout`.
 Create a function above main as follows:
 
-```
+```cpp
 #include <string>
 std::string getName( A3DEntity *ntt ) {
   return std::string();
@@ -301,7 +301,7 @@ The struct must be initialized using a macro prior to its use.
 Among other possible things, the initialization macro sets the `m_usStructSize` field, which serves as a check internally.
 Inside the function you just stubbed out, add the following lines of code.
 
-```
+```cpp
 std::string name;
 A3DRootBaseData rbd;
 A3D_INITIALIZE_DATA( A3DRootBaseData, rbd );
@@ -313,7 +313,7 @@ The pattern that follows is pervasive when using the HOOPS Exchange API.
 Any time you read data you must be sure to make a corresponding call to free it.
 This pattern looks something like this.
 
-```
+```cpp
 if( A3D_SUCCESS == A3DRootBaseGet( ntt, &rbd ) ) {
   name = rbd.m_pcName ? rbd.m_pcName : "";
 }
@@ -325,7 +325,7 @@ We‘ll stick to the more purist approach for the purposes of this tutorial.
 
 Once complete, your function should look like this:
 
-```
+```cpp
 #include <string>
 std::string getName( A3DEntity *ntt ) {
   std::string name;
@@ -343,7 +343,7 @@ std::string getName( A3DEntity *ntt ) {
 
 Back in main, add the following line of code after the model file is successfully loaded.
 
-```
+```cpp
 std::cout << getName( model_file ) << std::endl;
 ```
 
@@ -372,7 +372,7 @@ In addition to possibly owning a collection of assembly nodes, a product occurre
 Let‘s employ all the previously laid groundwork to write a recursive function that traverses the assembly structure and prints the node‘s name.
 Create the following function just above main, below `getName`.
 
-```
+```cpp
 void traverse( A3DAsmProductOccurrence *po, int indent = 1) {
   if( nullptr == po ) {
     return;
@@ -395,7 +395,7 @@ With this function now in place, we can modify the main function body to use it.
 Recall we have a model file object, so we must retrieve its contents and iterate over the collection of root assembly nodes.
 For each root node, we‘ll invoke traverse.
 
-```
+```cpp
 A3DAsmModelFileData mfd;
 A3D_INITIALIZE_DATA( A3DAsmModelFileData, mfd );
 if( A3D_SUCCESS == A3DAsmModelFileGet( model_file, &mfd ) ) {
@@ -409,7 +409,7 @@ A3DAsmModelFileGet( nullptr, &mfd );
 Build and run the application and see that we‘ve accomplished the goal we set out to achieve.
 Your output should look something like this:
 
-```
+```cpp
 Ready for use.
 Loaded file:
 X:/HOOPS_Exchange_2021_SP2_U2/samples/data/prc/__drill.prc
@@ -438,7 +438,7 @@ You have laid foundational skills that will be useful throughout your use of HOO
 
 The completed code you have should resemble this:
 
-```
+```cpp
 #define INITIALIZE_A3D_API
 #include <A3DSDKIncludes.h>
 #include <iostream>
@@ -513,8 +513,3 @@ int main(int, char**) {
 }
 ```
 
-<div id="autoExpand">
-    <span>top_level:0</span>
-</div>
-
-*/
