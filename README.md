@@ -409,7 +409,7 @@ A3DAsmModelFileGet( nullptr, &mfd );
 Build and run the application and see that we‘ve accomplished the goal we set out to achieve.
 Your output should look something like this:
 
-```cpp
+```
 Ready for use.
 Loaded file:
 X:/HOOPS_Exchange_2021_SP2_U2/samples/data/prc/__drill.prc
