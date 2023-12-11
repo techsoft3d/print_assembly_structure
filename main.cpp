@@ -11,13 +11,9 @@
 /// To see how the value is used, check the `main()` function.
 #define INPUT_FILE "/prc/_micro engine.prc"
 
-typedef struct {
-    size_t depth;
-} TraverseData;
-
-void traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const data_traverse) {
+void traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, size_t depth) {
     // Display node's entity name
-    std::cout << std::string(2 * data_traverse->depth, ' '); // Print indent
+    std::cout << std::string(2 * depth, ' '); // Print indent
 
     A3DUTF8Char* node_name = 0;
     if (A3DTreeNodeGetName(hnd_node, &node_name) == A3D_SUCCESS && node_name != 0) {
@@ -32,15 +28,10 @@ void traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, Travers
     A3DTreeNode** child_nodes = 0;
 
     if(A3DTreeNodeGetChildren(hnd_tree, hnd_node, &n_child_nodes, &child_nodes) == A3D_SUCCESS) {
-        ++data_traverse->depth;
-
         for (A3DUns32 n = 0 ; n < n_child_nodes ; ++n) {
-            traverse_tree(hnd_tree, child_nodes[n], data_traverse);
+            traverse_tree(hnd_tree, child_nodes[n], depth+1);
         }
-
         A3DTreeNodeGetChildren(0, 0, &n_child_nodes, &child_nodes);
-
-        --data_traverse->depth;
     }
 }
  
@@ -58,7 +49,6 @@ int main(int argc, char* argv[])
 
     ////////////////////////////////////////////////////////
     // TRAVERSE THE MODEL TREE
-    TraverseData     traverse_data;
     A3DTree*         hnd_tree = 0;
 
     status = A3DTreeCompute(model_file, &hnd_tree, 0);
@@ -68,8 +58,7 @@ int main(int argc, char* argv[])
     status = A3DTreeGetRootNode(hnd_tree, &hnd_root_node);
     assert(status == A3D_SUCCESS);
 
-    traverse_data.depth = 0;
-    traverse_tree(hnd_tree, hnd_root_node, &traverse_data);
+    traverse_tree(hnd_tree, hnd_root_node, 0);
 
     A3DTreeCompute(0, &hnd_tree, 0);
 
