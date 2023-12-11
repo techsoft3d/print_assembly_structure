@@ -1,73 +1,83 @@
 #define INITIALIZE_A3D_API
 #include <A3DSDKIncludes.h>
+
 #include <iostream>
 #include <string>
+#include <cassert>
 
-std::string getName( A3DEntity *ntt ) {
-    std::string name;
-    A3DRootBaseData rbd;
-    A3D_INITIALIZE_DATA( A3DRootBaseData, rbd );
-    if( A3D_SUCCESS == A3DRootBaseGet( ntt, &rbd ) ) {
-        name = rbd.m_pcName ? rbd.m_pcName : "";
-    }
-    A3DRootBaseGet( nullptr, &rbd );
-    return name;
-}
+////////////////////////////////////////////////////////////////////////////////
+/// INPUT_FILE
+/// Default CAD input file, relative to Exchange sample data folder.
+/// To see how the value is used, check the `main()` function.
+#define INPUT_FILE "/prc/_micro engine.prc"
 
-void traverse( A3DAsmProductOccurrence *po, int indent = 1) {
-    if( nullptr == po ) {
-        return;
-    }
+typedef struct {
+    size_t depth;
+} TraverseData;
 
-    std::cout << std::string( 2*indent, ' ' ) << getName( po ) << std::endl;
+void traverse_tree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, TraverseData* const data_traverse) {
+    // Display node's entity name
+    std::cout << std::string(2 * data_traverse->depth, ' '); // Print indent
 
-    A3DAsmProductOccurrenceData pd;
-    A3D_INITIALIZE_DATA( A3DAsmProductOccurrenceData, pd );
-    if( A3D_SUCCESS == A3DAsmProductOccurrenceGet( po, &pd ) ) {
-        for(A3DUns32 idx = 0u; idx < pd.m_uiPOccurrencesSize; ++idx ) {
-            traverse( pd.m_ppPOccurrences[idx], indent + 1 );
-        }
-    }
-    A3DAsmProductOccurrenceGet( nullptr, &pd );
-}
-
-int main(int, char**) { 
-    A3DSDKHOOPSExchangeLoader loader("X:/HOOPS_Exchange_Publish_2021_SP2_U2/bin/win64_v140");
-    if( ! loader.m_bSDKLoaded ) {
-        std::cerr << "Unable to load HOOPS Exchange." << std::endl;
-        std::cerr << "Status: " << A3DMiscGetErrorMsg(loader.m_eSDKStatus) << std::endl;
-        return -1;
-    }
-
-    std::cout << "Ready for use." << std::endl;
-
-    A3DRWParamsLoadData load_params;
-    A3D_INITIALIZE_DATA( A3DRWParamsLoadData, load_params );
-    A3DAsmModelFile *model_file = nullptr;
-    char const *input_file = 
-        "X:/HOOPS_Exchange_2021_SP2_U2/samples/data/prc/__drill.prc";
-    A3DStatus load_status = A3DAsmModelFileLoadFromFile( input_file, &load_params, &model_file );
-    if( A3D_SUCCESS != load_status ) {
-        std::cerr << "Unable to load the specified file: " << input_file << std::endl;
-        std::cerr << "Status: " << A3DMiscGetErrorMsg( load_status ) << std::endl;
-        return -1;
+    A3DUTF8Char* node_name = 0;
+    if (A3DTreeNodeGetName(hnd_node, &node_name) == A3D_SUCCESS && node_name != 0) {
+        std::cout << node_name << std::endl;
+        A3DTreeNodeGetName(0, &node_name);
     } else {
-        std::cout << "Loaded file: " << input_file << std::endl;
+        std::cout << "N/A" << std::endl;
     }
+    
+    // Recursively call traverse_tree on chil nodes
+    A3DUns32 n_child_nodes    = 0;
+    A3DTreeNode** child_nodes = 0;
 
-    std::cout << getName( model_file ) << std::endl;
+    if(A3DTreeNodeGetChildren(hnd_tree, hnd_node, &n_child_nodes, &child_nodes) == A3D_SUCCESS) {
+        ++data_traverse->depth;
 
-    A3DAsmModelFileData mfd;
-    A3D_INITIALIZE_DATA( A3DAsmModelFileData, mfd );
-    if( A3D_SUCCESS == A3DAsmModelFileGet( model_file, &mfd ) ) {
-        for( A3DUns32 idx = 0u; idx < mfd.m_uiPOccurrencesSize; ++idx ) {
-            traverse( mfd.m_ppPOccurrences[idx] );
+        for (A3DUns32 n = 0 ; n < n_child_nodes ; ++n) {
+            traverse_tree(hnd_tree, child_nodes[n], data_traverse);
         }
+
+        A3DTreeNodeGetChildren(0, 0, &n_child_nodes, &child_nodes);
+
+        --data_traverse->depth;
     }
-    A3DAsmModelFileGet( nullptr, &mfd );
-
-    A3DAsmModelFileDelete( model_file );
-    model_file = nullptr;
-    return 0;
 }
+ 
+int main(int argc, char* argv[])
+{
+    /////////////////////////////////////////////////////
+    // INITIALIZE HOOPS EXCHANGE AND LOAD THE MODEL FILE.
+    A3DSDKHOOPSExchangeLoader he_loader(HE_BINARY_DIRECTORY);
+    assert(he_loader.m_eSDKStatus == A3D_SUCCESS);
+    
+    A3DImport he_import(HE_DATA_DIRECTORY INPUT_FILE);
+    A3DStatus status = he_loader.Import(he_import);
+    assert(status == A3D_SUCCESS);
+    A3DAsmModelFile* model_file = he_loader.m_psModelFile;
 
+    ////////////////////////////////////////////////////////
+    // TRAVERSE THE MODEL TREE
+    TraverseData     traverse_data;
+    A3DTree*         hnd_tree = 0;
+
+    status = A3DTreeCompute(model_file, &hnd_tree, 0);
+    assert(status == A3D_SUCCESS);
+
+    A3DTreeNode* hnd_root_node = 0;
+    status = A3DTreeGetRootNode(hnd_tree, &hnd_root_node);
+    assert(status == A3D_SUCCESS);
+
+    traverse_data.depth = 0;
+    traverse_tree(hnd_tree, hnd_root_node, &traverse_data);
+
+    A3DTreeCompute(0, &hnd_tree, 0);
+
+    /////////////////////////////////////////////////////////
+    // Everything is loaded to GPU, Exchange can be released.
+    A3DAsmModelFileDelete(model_file);
+    A3DDllTerminate();
+    A3DSDKUnloadLibrary();
+
+    return EXIT_SUCCESS;
+}

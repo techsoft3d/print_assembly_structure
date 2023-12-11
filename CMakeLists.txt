@@ -1,12 +1,25 @@
-cmake_minimum_required(VERSION 3.0.0)
-project(he_basic_app)
+cmake_minimum_required(VERSION 3.18)
+project(PrintAssemblyStructure)
 
-add_executable(he_basic_app main.cpp)
-target_link_libraries(he_basic_app ${CMAKE_DL_LIBS})
-
+set(EXCHANGE_PACKAGE_PATH "" CACHE PATH "Path to Exchange")
+if(NOT EXCHANGE_PACKAGE_PATH)
+    message(FATAL_ERROR "EXCHANGE_PACKAGE_PATH must be set to a valid folder path.")
+endif()
+set(HE_DATA_DIRECTORY "${EXCHANGE_PACKAGE_PATH}/samples/data")
 if(WIN32)
-    target_include_directories(he_basic_app "X:/HOOPS_Exchange_Publish_2021_SP2_U2/include")
+elseif(APPLE)
 else()
-    target_include_directories(he_basic_app "/opt/local/ts3d/HOOPS_Exchange_2021_SP2_U2/include")
+    set(HE_BINARY_DIRECTORY ${EXCHANGE_PACKAGE_PATH}/bin/linux32)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(HE_BINARY_DIRECTORY ${EXCHANGE_PACKAGE_PATH}/bin/linux64)
+    endif()
 endif()
 
+add_executable(PrintAssemblyStructure main.cpp)
+target_include_directories(PrintAssemblyStructure PRIVATE 
+    "${EXCHANGE_PACKAGE_PATH}/include"
+)
+target_compile_definitions(PrintAssemblyStructure PRIVATE 
+    HE_BINARY_DIRECTORY="${HE_BINARY_DIRECTORY}"
+    HE_DATA_DIRECTORY="${HE_DATA_DIRECTORY}"
+)
